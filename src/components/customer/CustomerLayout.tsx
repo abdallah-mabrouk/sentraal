@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { Home, FileText, Wrench, ShoppingBag, Bell, User } from 'lucide-react'
+import { Home, FileText, Wrench, ShoppingBag, User } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useBranchStore } from '@/stores/branchStore'
@@ -9,27 +9,43 @@ import { DarkModeToggle } from '@/components/ui/DarkModeToggle'
 
 const NAV = [
   { path: '/app', label: 'الرئيسية', icon: Home, exact: true },
-  { path: '/app/statement', label: 'حسابي', icon: FileText },
+  { path: '/app/statement', label: 'كشف الحساب', icon: FileText },
   { path: '/app/services', label: 'الخدمات', icon: Wrench },
   { path: '/app/products', label: 'المنتجات', icon: ShoppingBag },
   { path: '/app/profile', label: 'حسابي', icon: User },
 ]
 
 export default function CustomerLayout() {
-  const { user, isActiveCustomer } = useAuthStore()
+  const { user } = useAuthStore()
   const { unreadCount } = useNotifications()
   const { getSelectedBranch } = useBranchStore()
   const isPending = user?.account_status === 'pending'
   const location = useLocation()
+  const branch = getSelectedBranch()
 
   // الصفحات المسموح بها في وضع المراجعة
   const allowedPending = ['/app/services', '/app/products']
-  const isAllowed = !isPending || allowedPending.some(p => location.pathname.startsWith(p))
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header مع زر الوضع الليلي */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="text-2xl">💳</div>
+            <div>
+              <h1 className="font-bold text-gray-800 dark:text-white text-sm">سنترال</h1>
+              <p className="text-xs text-gray-400">{branch?.name || 'الفرع الرئيسي'}</p>
+            </div>
+          </div>
+          <DarkModeToggle />
+        </div>
+      </header>
+
       {/* شريط الإعلانات */}
-      <TickerBanner branch={getSelectedBranch()} />
+      {branch?.banner_message && (
+        <TickerBanner message={branch.banner_message} color={branch.banner_color} />
+      )}
 
       {/* تنبيه وضع المراجعة */}
       {isPending && (
@@ -64,7 +80,7 @@ export default function CustomerLayout() {
                 className={({ isActive }) => cn(
                   'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors relative',
                   isActive && !isLocked
-                    ? 'text-blue-600'
+                    ? 'text-blue-600 dark:text-blue-400'
                     : isLocked
                     ? 'text-gray-300 dark:text-gray-600'
                     : 'text-gray-400 dark:text-gray-500'
@@ -88,6 +104,5 @@ export default function CustomerLayout() {
         </div>
       </nav>
     </div>
-    <DarkModeToggle />
   )
 }
