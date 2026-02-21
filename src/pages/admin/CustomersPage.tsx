@@ -70,69 +70,89 @@ export default function CustomersPage() {
   }, [])
 
   const handleAdd = async () => {
-    if (!form.full_name || !form.phone) {
-      toast.error('أدخل الاسم ورقم الهاتف')
-      return
-    }
-
-    setSaving(true)
-    try {
-      // إنشاء حساب في التطبيق إذا طُلب
-      let userId: string | undefined
-      if (form.create_app_account) {
-        const email = `${form.phone}@sentraal.app`
-        const tempPassword = Math.random().toString(36).slice(-8)
-        
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password: tempPassword,
-        })
-        if (authError) throw authError
-        userId = authData.user?.id
-
-        // إنشاء سجل في users
-        const { error: userError } = await supabase.from('users').insert({
-          id: userId,
-          phone: form.phone,
-          email: form.email || null,
-          full_name: form.full_name,
-          gender: form.gender || null,
-          birth_date: form.birth_date || null,
-          role: 'customer',
-          account_status: 'active', // مباشرة active
-        })
-        if (userError) throw userError
-
-        // إرسال كلمة المرور للعميل (في الواقع: SMS أو WhatsApp)
-        toast.success(`تم إنشاء الحساب. كلمة المرور المؤقتة: ${tempPassword}`)
-      }
-
-      // إنشاء العميل
-      const { error } = await supabase.from('customers').insert({
-        user_id: userId || null,
-        branch_id: form.branch_id || null,
-        area: form.area || null,
-        initial_balance: parseFloat(form.initial_balance),
-        balance: parseFloat(form.initial_balance),
-        can_request_services: form.can_request_services,
-        is_legacy_account: !form.create_app_account, // legacy إذا لم ينشأ حساب
-      })
-      if (error) throw error
-
-      toast.success('تم إضافة العميل')
-      setShowAdd(false)
-      setForm({
-        full_name: '', phone: '', email: '', gender: '', birth_date: '',
-        area: '', branch_id: '', initial_balance: '0',
-        can_request_services: false, create_app_account: false,
-      })
-      loadCustomers()
-    } catch (e: any) {
-      toast.error(e.message || 'حدث خطأ')
-    } finally {
-      setSaving(false)
-    }
+  if (!form.full_name || !form.phone) {
+    toast.error('أدخل الاسم ورقم الهاتف')
+    return
   }
+
+  setSaving(true)
+  try {
+    let userId: string | undefined
+
+    if (form.create_app_account) {
+      // استخدام رقم الهاتف كبريد مؤقت
+      const email = `${form.phone}@sentraal.local`
+      
+      // كلمة المرور: المخصصة أو تلقائية
+      const password = form.custom_password || generateRandomPassword()
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            phone: form.phone,
+            full_name: form.full_name,
+          }
+        }
+      })
+      
+      if (authError) throw authError
+      userId = authData.user?.id
+
+      await supabase.from('users').insert({
+        id: userId,
+        phone: form.phone,
+        email: form.email || null,
+        full_name: form.full_name,
+        gender: form.gender || null,
+        birth_date: form.birth_date || null,
+        role: 'customer',
+        account_status: 'active',
+      })
+
+      // عرض كلمة المرور للأدمن
+      toast.success(
+        `تم إنشاء الحساب! 🎉\n\nكلمة المرور: ${password}\n\nأرسلها للعميل عبر واتساب`,
+        { duration: 15000 }
+      )
+      
+      // نسخ كلمة المرور للحافظة تلقائياً
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(password)
+        toast.success('تم نسخ كلمة المرور للحافظة! 📋', { duration: 3000 })
+      }
+    }
+
+    await supabase.from('customers').insert({
+      user_id: userId || null,
+      branch_id: form.branch_id || null,
+      area: form.area || null,
+      initial_balance: parseFloat(form.initial_balance),
+      balance: parseFloat(form.initial_balance),
+      can_request_services: form.can_request_services,
+      is_legacy_account: !form.create_app_account,
+    })
+
+    toast.success('تم إضافة العميل')
+    setShowAdd(false)
+    setForm({ /* reset form */ })
+    loadCustomers()
+  } catch (e: any) {
+    toast.error(e.message || 'حدث خطأ')
+  } finally {
+    setSaving(false)
+  }
+}
+// دالة توليد كلمة مرور
+function generateRandomPassword(length = 8) {
+  const chars = '0123456789'
+  let password = ''
+  for (let i = 0; i < length; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return password
+}
 
   const filtered = customers.filter(c => {
     const user = c.user as any
@@ -272,7 +292,14 @@ export default function CustomersPage() {
             value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
           />
-          
+          <Input
+  label="كلمة المرور (اختياري)"
+  type="text"
+  placeholder="اتركه فارغاً لتوليد كلمة مرور تلقائية"
+  value={form.custom_password}
+  onChange={e => setForm(f => ({ ...f, custom_password: e.target.value }))}
+  hint="8 أرقام على الأقل - سيتم عرضها لك بعد الإنشاء"
+/>
           <div className="grid grid-cols-2 gap-3">
             <Select
               label="الجنس"
