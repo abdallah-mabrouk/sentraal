@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useNotifications } from '@/hooks/useNotifications'
 import { cn } from '@/utils/cn'
+import { DarkModeToggle } from '@/components/ui/DarkModeToggle'
 
 const navItems = [
   { path: '/admin', label: 'لوحة التحكم', icon: LayoutDashboard, exact: true },
@@ -145,6 +146,7 @@ export default function AdminLayout() {
               </>
             )}
           </div>
+          <DarkModeToggle />
         </header>
 
         {/* Content */}
