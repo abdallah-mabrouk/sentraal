@@ -5,6 +5,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useBranchStore } from '@/stores/branchStore'
 import { cn } from '@/utils/cn'
 import { TickerBanner } from './TickerBanner'
+import { DarkModeToggle } from '@/components/ui/DarkModeToggle'
 
 const NAV = [
   { path: '/app', label: 'الرئيسية', icon: Home, exact: true },
@@ -87,5 +88,6 @@ export default function CustomerLayout() {
         </div>
       </nav>
     </div>
+    <DarkModeToggle />
   )
 }
