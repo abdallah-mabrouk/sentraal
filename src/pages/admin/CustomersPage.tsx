@@ -81,7 +81,7 @@ export default function CustomersPage() {
 
     if (form.create_app_account) {
       // استخدام رقم الهاتف كبريد مؤقت
-      const email = `${form.phone}@sentraal.local`
+      const email = `customer-${form.phone}@sentraal.app`
       
       // كلمة المرور: المخصصة أو تلقائية
       const password = form.custom_password || generateRandomPassword()
