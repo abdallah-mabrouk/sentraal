@@ -79,7 +79,11 @@ export default function TransactionsPage() {
 
   const loadAccounts = async () => {
     const [custRes, machRes, wallRes] = await Promise.all([
-      supabase.from('customers').select('*, user:users(*)').eq('user:users.account_status', 'active'),
+      // جلب كل من له سجل في customers (بغض النظر عن role)
+      supabase
+        .from('customers')
+        .select('*, user:users!inner(*)')
+        .eq('user.account_status', 'active'),
       supabase.from('machines').select('*').eq('is_active', true),
       supabase.from('wallets').select('*').eq('is_active', true),
     ])
