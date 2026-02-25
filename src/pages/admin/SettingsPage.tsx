@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Save, RefreshCw, Upload, Trash2, AlertTriangle, Download } from 'lucide-react'
+import { Save, RefreshCw, Trash2, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { Modal } from '@/components/ui/Modal'
-import { Badge } from '@/components/ui/Badge'
-import { DarkModeToggle } from '@/components/ui/DarkModeToggle'
 
 interface Tier {
   id: string
@@ -26,25 +24,19 @@ export default function SettingsPage() {
   const isSuperAdmin = user?.role === 'super_admin'
   
   const [settings, setSettings] = useState({
-    // المظهر
     app_name: 'سنترال',
     app_logo_url: '',
     app_favicon_url: '',
-    app_primary_color: '#3B82F6',
-    // الرسوم
     wallet_default_fee: '1',
     service_fee_base: '5',
     service_fee_per: '500',
     service_fee_tolerance: '50',
-    // النقاط
     loyalty_enabled: 'true',
     loyalty_points_per: '500',
     loyalty_points_value: '10',
-    // الإحالات
     referral_enabled: 'true',
     referral_required_amount: '1000',
     referral_reward_amount: '50',
-    // عام
     currency: 'ج',
   })
   
@@ -53,13 +45,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
-  // Modals
   const [showTierModal, setShowTierModal] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
   const [editingTier, setEditingTier] = useState<Tier | null>(null)
   const [resetConfirmation, setResetConfirmation] = useState('')
   
-  // Tier form
   const [tierForm, setTierForm] = useState({
     name: '',
     icon: '⭐',
@@ -68,7 +58,6 @@ export default function SettingsPage() {
     withdrawal_discount: '',
   })
 
-  // Load data
   const loadSettings = async () => {
     try {
       const { data } = await supabase.from('settings').select('key, value')
@@ -111,7 +100,6 @@ export default function SettingsPage() {
 
   useEffect(() => { loadAll() }, [])
 
-  // Save settings
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -127,7 +115,6 @@ export default function SettingsPage() {
     }
   }
 
-  // Tier management
   const handleAddTier = () => {
     setEditingTier(null)
     setTierForm({
@@ -201,7 +188,6 @@ export default function SettingsPage() {
     }
   }
 
-  // Reset database
   const handleResetDatabase = async () => {
     if (resetConfirmation !== 'RESET') {
       toast.error('❌ يجب كتابة RESET للتأكيد')
@@ -220,14 +206,12 @@ export default function SettingsPage() {
       setShowResetModal(false)
       setResetConfirmation('')
       
-      // Reload page after 2 seconds
       setTimeout(() => window.location.reload(), 2000)
     } catch (e: any) {
       toast.error(e.message || 'حدث خطأ')
     }
   }
 
-  // Export backup
   const handleExportBackup = async () => {
     try {
       const { data, error } = await supabase.rpc('export_backup_info')
@@ -246,7 +230,6 @@ export default function SettingsPage() {
     }
   }
 
-  // Calculate example fees
   const exampleFees = useMemo(() => {
     const base = parseFloat(settings.service_fee_base) || 5
     const per = parseFloat(settings.service_fee_per) || 500
@@ -277,11 +260,9 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 space-y-6 max-w-4xl mx-auto pb-20">
-      {/* Header */}
       <div className="flex items-center justify-between sticky top-0 bg-gray-50 dark:bg-gray-900 z-10 py-2">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">⚙️ الإعدادات</h1>
         <div className="flex gap-2 items-center">
-          <DarkModeToggle />
           <Button variant="ghost" size="sm" icon={<RefreshCw size={16} />} onClick={loadAll}>
             تحديث
           </Button>
@@ -291,7 +272,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 1. المظهر العام */}
       <Card>
         <CardHeader>
           <CardTitle>🎨 المظهر العام</CardTitle>
@@ -347,11 +327,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Continue in next message due to length... */}
-    </div>
-  )
-}
-      {/* 2. إدارة الشرائح */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -370,7 +345,7 @@ export default function SettingsPage() {
                 <div>
                   <div className="font-bold text-gray-800 dark:text-white">{tier.name}</div>
                   <div className="text-sm text-gray-500">
-                    الحد: {tier.monthly_threshold.toLocaleString()} ج/شهر
+                    الحد: {tier.monthly_threshold.toLocaleString()} ج شهرياً
                   </div>
                 </div>
               </div>
@@ -411,7 +386,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 3. الرسوم والخدمات */}
       <Card>
         <CardHeader>
           <CardTitle>💰 الرسوم والخدمات</CardTitle>
@@ -461,7 +435,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 4. نقاط الولاء */}
       <Card>
         <CardHeader>
           <CardTitle>🎁 نقاط الولاء</CardTitle>
@@ -498,7 +471,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 5. الإحالات */}
       <Card>
         <CardHeader>
           <CardTitle>👥 نظام الإحالات</CardTitle>
@@ -535,7 +507,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 6. إعدادات عامة */}
       <Card>
         <CardHeader>
           <CardTitle>🌍 إعدادات عامة</CardTitle>
@@ -549,7 +520,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 7. النسخ الاحتياطي */}
       <Card>
         <CardHeader>
           <CardTitle>🔒 النسخ الاحتياطي</CardTitle>
@@ -568,7 +538,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 8. منطقة الخطر (Super Admin فقط) */}
       {isSuperAdmin && (
         <Card className="border-2 border-red-200 dark:border-red-900">
           <CardHeader>
@@ -579,10 +548,10 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
               <p className="text-sm text-red-800 dark:text-red-300 mb-2">
-                ⚠️ تحذير: سيتم حذف جميع البيانات بشكل نهائي (المعاملات، العملاء، المخزون، إلخ)
+                ⚠️ تحذير: سيتم حذف جميع البيانات بشكل نهائي
               </p>
               <p className="text-xs text-red-600 dark:text-red-400">
-                هذه الميزة مخصصة للتجربة فقط. لا يمكن التراجع عن هذا الإجراء!
+                لا يمكن التراجع عن هذا الإجراء!
               </p>
             </div>
             
@@ -598,7 +567,6 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* 9. معلومات النظام */}
       {systemInfo && (
         <Card>
           <CardHeader>
@@ -625,7 +593,6 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Tier Modal */}
       <Modal
         isOpen={showTierModal}
         onClose={() => setShowTierModal(false)}
@@ -679,7 +646,6 @@ export default function SettingsPage() {
         </div>
       </Modal>
 
-      {/* Reset Modal */}
       <Modal
         isOpen={showResetModal}
         onClose={() => {
@@ -694,15 +660,8 @@ export default function SettingsPage() {
               ⚠️ تحذير شديد: هذا الإجراء لا يمكن التراجع عنه!
             </p>
             <p className="text-sm text-red-700 dark:text-red-400">
-              سيتم حذف جميع:
+              سيتم حذف جميع المعاملات والعملاء والمنتجات
             </p>
-            <ul className="text-sm text-red-600 dark:text-red-400 list-disc list-inside">
-              <li>المعاملات</li>
-              <li>العملاء (ما عدا حسابك)</li>
-              <li>المنتجات والفئات</li>
-              <li>الماكينات والمحافظ</li>
-              <li>كل البيانات الأخرى</li>
-            </ul>
           </div>
 
           <div>
