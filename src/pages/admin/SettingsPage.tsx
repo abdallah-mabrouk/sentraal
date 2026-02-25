@@ -285,44 +285,62 @@ export default function SettingsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                اللوجو الرئيسي
-              </label>
-              <div className="flex items-center gap-2">
-                {settings.app_logo_url && (
-                  <img 
-                    src={settings.app_logo_url} 
-                    alt="Logo" 
-                    className="w-16 h-16 object-contain rounded border"
-                  />
-                )}
-                <Input
-                  placeholder="رابط اللوجو"
-                  value={settings.app_logo_url}
-                  onChange={e => setSettings(s => ({ ...s, app_logo_url: e.target.value }))}
-                />
-              </div>
-            </div>
+  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    اللوجو الرئيسي
+    {settings.app_logo_url && (
+      <div className="relative group">
+        <span className="cursor-help text-blue-500">ℹ️</span>
+        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+          <div>الحجم الموصى به: 200x60 بكسل</div>
+          <div>الصيغة: PNG أو SVG</div>
+          <div>الحجم الأقصى: 500 KB</div>
+        </div>
+      </div>
+    )}
+  </label>
+  <div className="flex items-center gap-2">
+    {settings.app_logo_url && (
+      <img 
+        src={settings.app_logo_url} 
+        alt="Logo" 
+        className="w-16 h-16 object-contain rounded border"
+      />
+    )}
+    <Input
+      placeholder="رابط اللوجو"
+      value={settings.app_logo_url}
+      onChange={e => setSettings(s => ({ ...s, app_logo_url: e.target.value }))}
+    />
+  </div>
+</div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                الأيقونة (Favicon)
-              </label>
-              <div className="flex items-center gap-2">
-                {settings.app_favicon_url && (
-                  <img 
-                    src={settings.app_favicon_url} 
-                    alt="Favicon" 
-                    className="w-8 h-8 object-contain rounded border"
-                  />
-                )}
-                <Input
-                  placeholder="رابط الأيقونة"
-                  value={settings.app_favicon_url}
-                  onChange={e => setSettings(s => ({ ...s, app_favicon_url: e.target.value }))}
-                />
-              </div>
-            </div>
+  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    الأيقونة (Favicon)
+    <div className="relative group">
+      <span className="cursor-help text-blue-500">ℹ️</span>
+      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+        <div>الحجم الموصى به: 32x32 بكسل</div>
+        <div>الصيغة: ICO أو PNG</div>
+        <div>الحجم الأقصى: 100 KB</div>
+      </div>
+    </div>
+  </label>
+  <div className="flex items-center gap-2">
+    {settings.app_favicon_url && (
+      <img 
+        src={settings.app_favicon_url} 
+        alt="Favicon" 
+        className="w-8 h-8 object-contain rounded border"
+      />
+    )}
+    <Input
+      placeholder="رابط الأيقونة"
+      value={settings.app_favicon_url}
+      onChange={e => setSettings(s => ({ ...s, app_favicon_url: e.target.value }))}
+    />
+  </div>
+</div>
           </div>
         </div>
       </Card>
