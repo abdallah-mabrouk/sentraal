@@ -143,6 +143,13 @@ export default function SettingsPage() {
 
   const handleSaveTier = async () => {
     try {
+      // التحقق من الحقول
+      if (!tierForm.name || !tierForm.threshold_from || !tierForm.threshold_to || 
+          !tierForm.transfer_price_per_thousand || !tierForm.withdrawal_price_per_thousand) {
+        toast.error('❌ يجب ملء جميع الحقول')
+        return
+      }
+
       const data = {
         name: tierForm.name,
         icon: tierForm.icon,
@@ -153,24 +160,61 @@ export default function SettingsPage() {
         is_active: true,
       }
 
+      // التحقق من صحة الأرقام
+      if (data.threshold_to <= data.threshold_from) {
+        toast.error('❌ نهاية الشريحة يجب أن تكون أكبر من البداية')
+        return
+      }
+
       if (editingTier) {
-        await supabase
+        // تعديل
+        console.log('Updating tier:', editingTier.id, data)
+        
+        const { data: result, error } = await supabase
           .from('pricing_tiers_progressive')
           .update(data)
           .eq('id', editingTier.id)
+          .select()
+
+        if (error) {
+          console.error('Update error:', error)
+          throw error
+        }
+
+        console.log('Update result:', result)
         toast.success('✅ تم تحديث الشريحة')
       } else {
-        const maxOrder = Math.max(...tiers.map(t => t.tier_order), 0)
-        await supabase
+        // إضافة جديدة
+        const maxOrder = tiers.length > 0 
+          ? Math.max(...tiers.map(t => t.tier_order)) 
+          : 0
+        
+        const newTier = { ...data, tier_order: maxOrder + 1 }
+        
+        console.log('Inserting tier:', newTier)
+        
+        const { data: result, error } = await supabase
           .from('pricing_tiers_progressive')
-          .insert({ ...data, tier_order: maxOrder + 1 })
+          .insert(newTier)
+          .select()
+
+        if (error) {
+          console.error('Insert error:', error)
+          throw error
+        }
+
+        console.log('Insert result:', result)
         toast.success('✅ تم إضافة الشريحة')
       }
 
       setShowTierModal(false)
-      loadTiers()
+      
+      // إعادة تحميل الشرائح
+      await loadTiers()
+      
     } catch (e: any) {
-      toast.error(e.message || 'حدث خطأ')
+      console.error('Save tier error:', e)
+      toast.error(e.message || '❌ حدث خطأ في الحفظ')
     }
   }
 
