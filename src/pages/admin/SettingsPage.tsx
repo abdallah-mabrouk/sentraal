@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Save, RefreshCw, Trash2, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
@@ -9,13 +9,14 @@ import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { Modal } from '@/components/ui/Modal'
 
-interface Tier {
+interface ProgressiveTier {
   id: string
+  tier_order: number
   name: string
   icon: string
-  monthly_threshold: number
-  transfer_discount: number
-  withdrawal_discount: number
+  threshold_from: number
+  threshold_to: number
+  price_per_thousand: number
   is_active: boolean
 }
 
@@ -27,10 +28,6 @@ export default function SettingsPage() {
     app_name: 'سنترال',
     app_logo_url: '',
     app_favicon_url: '',
-    wallet_default_fee: '1',
-    service_fee_base: '5',
-    service_fee_per: '500',
-    service_fee_tolerance: '50',
     loyalty_enabled: 'true',
     loyalty_points_per: '500',
     loyalty_points_value: '10',
@@ -40,22 +37,22 @@ export default function SettingsPage() {
     currency: 'ج',
   })
   
-  const [tiers, setTiers] = useState<Tier[]>([])
+  const [tiers, setTiers] = useState<ProgressiveTier[]>([])
   const [systemInfo, setSystemInfo] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
   const [showTierModal, setShowTierModal] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
-  const [editingTier, setEditingTier] = useState<Tier | null>(null)
+  const [editingTier, setEditingTier] = useState<ProgressiveTier | null>(null)
   const [resetConfirmation, setResetConfirmation] = useState('')
   
   const [tierForm, setTierForm] = useState({
     name: '',
     icon: '⭐',
-    monthly_threshold: '',
-    transfer_discount: '',
-    withdrawal_discount: '',
+    threshold_from: '',
+    threshold_to: '',
+    price_per_thousand: '',
   })
 
   const loadSettings = async () => {
@@ -74,9 +71,9 @@ export default function SettingsPage() {
   const loadTiers = async () => {
     try {
       const { data } = await supabase
-        .from('pricing_tiers_v2')
+        .from('pricing_tiers_progressive')
         .select('*')
-        .order('monthly_threshold', { ascending: true })
+        .order('tier_order', { ascending: true })
       setTiers(data || [])
     } catch (e) {
       console.error(e)
@@ -117,24 +114,25 @@ export default function SettingsPage() {
 
   const handleAddTier = () => {
     setEditingTier(null)
+    const lastTier = tiers[tiers.length - 1]
     setTierForm({
       name: '',
       icon: '⭐',
-      monthly_threshold: '',
-      transfer_discount: '',
-      withdrawal_discount: '',
+      threshold_from: lastTier ? lastTier.threshold_to.toString() : '0',
+      threshold_to: '',
+      price_per_thousand: '',
     })
     setShowTierModal(true)
   }
 
-  const handleEditTier = (tier: Tier) => {
+  const handleEditTier = (tier: ProgressiveTier) => {
     setEditingTier(tier)
     setTierForm({
       name: tier.name,
       icon: tier.icon,
-      monthly_threshold: tier.monthly_threshold.toString(),
-      transfer_discount: tier.transfer_discount.toString(),
-      withdrawal_discount: tier.withdrawal_discount.toString(),
+      threshold_from: tier.threshold_from.toString(),
+      threshold_to: tier.threshold_to.toString(),
+      price_per_thousand: tier.price_per_thousand.toString(),
     })
     setShowTierModal(true)
   }
@@ -144,17 +142,23 @@ export default function SettingsPage() {
       const data = {
         name: tierForm.name,
         icon: tierForm.icon,
-        monthly_threshold: parseFloat(tierForm.monthly_threshold),
-        transfer_discount: parseFloat(tierForm.transfer_discount),
-        withdrawal_discount: parseFloat(tierForm.withdrawal_discount),
+        threshold_from: parseFloat(tierForm.threshold_from),
+        threshold_to: parseFloat(tierForm.threshold_to),
+        price_per_thousand: parseFloat(tierForm.price_per_thousand),
         is_active: true,
       }
 
       if (editingTier) {
-        await supabase.from('pricing_tiers_v2').update(data).eq('id', editingTier.id)
+        await supabase
+          .from('pricing_tiers_progressive')
+          .update(data)
+          .eq('id', editingTier.id)
         toast.success('✅ تم تحديث الشريحة')
       } else {
-        await supabase.from('pricing_tiers_v2').insert(data)
+        const maxOrder = Math.max(...tiers.map(t => t.tier_order), 0)
+        await supabase
+          .from('pricing_tiers_progressive')
+          .insert({ ...data, tier_order: maxOrder + 1 })
         toast.success('✅ تم إضافة الشريحة')
       }
 
@@ -168,7 +172,7 @@ export default function SettingsPage() {
   const handleDeleteTier = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذه الشريحة؟')) return
     try {
-      await supabase.from('pricing_tiers_v2').delete().eq('id', id)
+      await supabase.from('pricing_tiers_progressive').delete().eq('id', id)
       toast.success('✅ تم حذف الشريحة')
       loadTiers()
     } catch (e: any) {
@@ -176,10 +180,10 @@ export default function SettingsPage() {
     }
   }
 
-  const handleToggleTier = async (tier: Tier) => {
+  const handleToggleTier = async (tier: ProgressiveTier) => {
     try {
       await supabase
-        .from('pricing_tiers_v2')
+        .from('pricing_tiers_progressive')
         .update({ is_active: !tier.is_active })
         .eq('id', tier.id)
       loadTiers()
@@ -230,26 +234,6 @@ export default function SettingsPage() {
     }
   }
 
-  const exampleFees = useMemo(() => {
-    const base = parseFloat(settings.service_fee_base) || 5
-    const per = parseFloat(settings.service_fee_per) || 500
-    const tolerance = parseFloat(settings.service_fee_tolerance) || 50
-
-    const calc = (amount: number) => {
-      if (amount <= per) return base
-      const extra = amount - per + tolerance
-      const slots = Math.floor(extra / per)
-      return base + slots * base
-    }
-
-    return [
-      { amount: 500, fee: calc(500) },
-      { amount: 550, fee: calc(550) },
-      { amount: 1000, fee: calc(1000) },
-      { amount: 1050, fee: calc(1050) },
-    ]
-  }, [settings.service_fee_base, settings.service_fee_per, settings.service_fee_tolerance])
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -285,62 +269,62 @@ export default function SettingsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    اللوجو الرئيسي
-    {settings.app_logo_url && (
-      <div className="relative group">
-        <span className="cursor-help text-blue-500">ℹ️</span>
-        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
-          <div>الحجم الموصى به: 200x60 بكسل</div>
-          <div>الصيغة: PNG أو SVG</div>
-          <div>الحجم الأقصى: 500 KB</div>
-        </div>
-      </div>
-    )}
-  </label>
-  <div className="flex items-center gap-2">
-    {settings.app_logo_url && (
-      <img 
-        src={settings.app_logo_url} 
-        alt="Logo" 
-        className="w-16 h-16 object-contain rounded border"
-      />
-    )}
-    <Input
-      placeholder="رابط اللوجو"
-      value={settings.app_logo_url}
-      onChange={e => setSettings(s => ({ ...s, app_logo_url: e.target.value }))}
-    />
-  </div>
-</div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                اللوجو الرئيسي
+                {settings.app_logo_url && (
+                  <div className="relative group">
+                    <span className="cursor-help text-blue-500">ℹ️</span>
+                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                      <div>الحجم الموصى به: 200x60 بكسل</div>
+                      <div>الصيغة: PNG أو SVG</div>
+                      <div>الحجم الأقصى: 500 KB</div>
+                    </div>
+                  </div>
+                )}
+              </label>
+              <div className="flex items-center gap-2">
+                {settings.app_logo_url && (
+                  <img 
+                    src={settings.app_logo_url} 
+                    alt="Logo" 
+                    className="w-16 h-16 object-contain rounded border"
+                  />
+                )}
+                <Input
+                  placeholder="رابط اللوجو"
+                  value={settings.app_logo_url}
+                  onChange={e => setSettings(s => ({ ...s, app_logo_url: e.target.value }))}
+                />
+              </div>
+            </div>
             
             <div>
-  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    الأيقونة (Favicon)
-    <div className="relative group">
-      <span className="cursor-help text-blue-500">ℹ️</span>
-      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
-        <div>الحجم الموصى به: 32x32 بكسل</div>
-        <div>الصيغة: ICO أو PNG</div>
-        <div>الحجم الأقصى: 100 KB</div>
-      </div>
-    </div>
-  </label>
-  <div className="flex items-center gap-2">
-    {settings.app_favicon_url && (
-      <img 
-        src={settings.app_favicon_url} 
-        alt="Favicon" 
-        className="w-8 h-8 object-contain rounded border"
-      />
-    )}
-    <Input
-      placeholder="رابط الأيقونة"
-      value={settings.app_favicon_url}
-      onChange={e => setSettings(s => ({ ...s, app_favicon_url: e.target.value }))}
-    />
-  </div>
-</div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                الأيقونة (Favicon)
+                <div className="relative group">
+                  <span className="cursor-help text-blue-500">ℹ️</span>
+                  <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                    <div>الحجم الموصى به: 32x32 بكسل</div>
+                    <div>الصيغة: ICO أو PNG</div>
+                    <div>الحجم الأقصى: 100 KB</div>
+                  </div>
+                </div>
+              </label>
+              <div className="flex items-center gap-2">
+                {settings.app_favicon_url && (
+                  <img 
+                    src={settings.app_favicon_url} 
+                    alt="Favicon" 
+                    className="w-8 h-8 object-contain rounded border"
+                  />
+                )}
+                <Input
+                  placeholder="رابط الأيقونة"
+                  value={settings.app_favicon_url}
+                  onChange={e => setSettings(s => ({ ...s, app_favicon_url: e.target.value }))}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </Card>
@@ -348,12 +332,17 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>⭐ إدارة الشرائح</CardTitle>
+            <div>
+              <CardTitle>📊 نظام الشرائح المتدرجة</CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                السعر لكل ألف جنيه يقل مع زيادة معاملات الكاش الشهرية
+              </p>
+            </div>
             <Button size="sm" onClick={handleAddTier}>+ إضافة شريحة</Button>
           </div>
         </CardHeader>
         <div className="space-y-3">
-          {tiers.map(tier => (
+          {tiers.map((tier, idx) => (
             <div
               key={tier.id}
               className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
@@ -363,14 +352,19 @@ export default function SettingsPage() {
                 <div>
                   <div className="font-bold text-gray-800 dark:text-white">{tier.name}</div>
                   <div className="text-sm text-gray-500">
-                    الحد: {tier.monthly_threshold.toLocaleString()} ج شهرياً
+                    من {tier.threshold_from.toLocaleString()} إلى {tier.threshold_to.toLocaleString()} ج
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  تحويل: {tier.transfer_discount}% | سحب: {tier.withdrawal_discount}%
+                <div className="text-right">
+                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {tier.price_per_thousand} ج / ألف
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    مثال: 5,000 ج = {(5 * tier.price_per_thousand).toFixed(0)} ج
+                  </div>
                 </div>
                 
                 <div className="flex gap-2">
@@ -381,13 +375,15 @@ export default function SettingsPage() {
                   >
                     ✏️
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDeleteTier(tier.id)}
-                  >
-                    🗑️
-                  </Button>
+                  {tiers.length > 1 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDeleteTier(tier.id)}
+                    >
+                      🗑️
+                    </Button>
+                  )}
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -401,55 +397,19 @@ export default function SettingsPage() {
               </div>
             </div>
           ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>💰 الرسوم والخدمات</CardTitle>
-        </CardHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              label="رسوم الخدمة الأساسية (ج)"
-              type="number"
-              value={settings.service_fee_base}
-              onChange={e => setSettings(s => ({ ...s, service_fee_base: e.target.value }))}
-            />
-            <Input
-              label="رسوم لكل (ج)"
-              type="number"
-              value={settings.service_fee_per}
-              onChange={e => setSettings(s => ({ ...s, service_fee_per: e.target.value }))}
-            />
-            <Input
-              label="هامش التسامح (ج)"
-              type="number"
-              value={settings.service_fee_tolerance}
-              onChange={e => setSettings(s => ({ ...s, service_fee_tolerance: e.target.value }))}
-              hint="الزيادة المسموحة دون رسوم إضافية"
-            />
-          </div>
           
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <div className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
-              ℹ️ أمثلة الحساب:
+          {tiers.length > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <div className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
+                💡 كيف يعمل النظام:
+              </div>
+              <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
+                <li>• المعاملة تُقسم على الشرائح المتبقية تلقائياً</li>
+                <li>• كلما زادت معاملاتك، قل السعر</li>
+                <li>• يُحسب على معاملات الكاش فقط للشهر الحالي</li>
+              </ul>
             </div>
-            <div className="space-y-1 text-sm text-blue-700 dark:text-blue-400">
-              {exampleFees.map(({ amount, fee }) => (
-                <div key={amount}>
-                  • {amount.toLocaleString()} ج → {fee} ج
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Input
-            label="رسوم المحفظة الافتراضية (ج)"
-            type="number"
-            value={settings.wallet_default_fee}
-            onChange={e => setSettings(s => ({ ...s, wallet_default_fee: e.target.value }))}
-          />
+          )}
         </div>
       </Card>
 
@@ -631,27 +591,28 @@ export default function SettingsPage() {
             placeholder="💎"
           />
           
-          <Input
-            label="الحد الشهري (ج)"
-            type="number"
-            value={tierForm.monthly_threshold}
-            onChange={e => setTierForm(f => ({ ...f, monthly_threshold: e.target.value }))}
-          />
-          
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="خصم التحويل (%)"
+              label="من (ج)"
               type="number"
-              value={tierForm.transfer_discount}
-              onChange={e => setTierForm(f => ({ ...f, transfer_discount: e.target.value }))}
+              value={tierForm.threshold_from}
+              onChange={e => setTierForm(f => ({ ...f, threshold_from: e.target.value }))}
             />
             <Input
-              label="خصم السحب (%)"
+              label="إلى (ج)"
               type="number"
-              value={tierForm.withdrawal_discount}
-              onChange={e => setTierForm(f => ({ ...f, withdrawal_discount: e.target.value }))}
+              value={tierForm.threshold_to}
+              onChange={e => setTierForm(f => ({ ...f, threshold_to: e.target.value }))}
             />
           </div>
+          
+          <Input
+            label="السعر لكل ألف جنيه (ج)"
+            type="number"
+            value={tierForm.price_per_thousand}
+            onChange={e => setTierForm(f => ({ ...f, price_per_thousand: e.target.value }))}
+            hint="مثال: 10 = كل 1000 ج تُحسب بـ 10 ج"
+          />
           
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setShowTierModal(false)}>
