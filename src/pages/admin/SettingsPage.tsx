@@ -133,10 +133,10 @@ export default function SettingsPage() {
     setTierForm({
       name: tier.name,
       icon: tier.icon,
-      threshold_from: tier.threshold_from.toString(),
-      threshold_to: tier.threshold_to.toString(),
-      transfer_price_per_thousand: tier.transfer_price_per_thousand.toString(),
-      withdrawal_price_per_thousand: tier.withdrawal_price_per_thousand.toString(),
+      threshold_from: tier.threshold_from?.toString() || "",
+      threshold_to: tier.threshold_to?.toString() || "",
+      transfer_price_per_thousand: tier.transfer_price_per_thousand?.toString() || "",
+      withdrawal_price_per_thousand: tier.withdrawal_price_per_thousand?.toString() || "",
     })
     setShowTierModal(true)
   }
