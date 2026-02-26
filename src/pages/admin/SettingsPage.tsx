@@ -16,7 +16,8 @@ interface ProgressiveTier {
   icon: string
   threshold_from: number
   threshold_to: number
-  price_per_thousand: number
+  transfer_price_per_thousand: number
+  withdrawal_price_per_thousand: number
   is_active: boolean
 }
 
@@ -52,7 +53,8 @@ export default function SettingsPage() {
     icon: '⭐',
     threshold_from: '',
     threshold_to: '',
-    price_per_thousand: '',
+    transfer_price_per_thousand: '',
+    withdrawal_price_per_thousand: '',
   })
 
   const loadSettings = async () => {
@@ -120,7 +122,8 @@ export default function SettingsPage() {
       icon: '⭐',
       threshold_from: lastTier ? lastTier.threshold_to.toString() : '0',
       threshold_to: '',
-      price_per_thousand: '',
+      transfer_price_per_thousand: '',
+      withdrawal_price_per_thousand: '',
     })
     setShowTierModal(true)
   }
@@ -132,7 +135,8 @@ export default function SettingsPage() {
       icon: tier.icon,
       threshold_from: tier.threshold_from.toString(),
       threshold_to: tier.threshold_to.toString(),
-      price_per_thousand: tier.price_per_thousand.toString(),
+      transfer_price_per_thousand: tier.transfer_price_per_thousand.toString(),
+      withdrawal_price_per_thousand: tier.withdrawal_price_per_thousand.toString(),
     })
     setShowTierModal(true)
   }
@@ -144,7 +148,8 @@ export default function SettingsPage() {
         icon: tierForm.icon,
         threshold_from: parseFloat(tierForm.threshold_from),
         threshold_to: parseFloat(tierForm.threshold_to),
-        price_per_thousand: parseFloat(tierForm.price_per_thousand),
+        transfer_price_per_thousand: parseFloat(tierForm.transfer_price_per_thousand),
+        withdrawal_price_per_thousand: parseFloat(tierForm.withdrawal_price_per_thousand),
         is_active: true,
       }
 
@@ -342,14 +347,14 @@ export default function SettingsPage() {
           </div>
         </CardHeader>
         <div className="space-y-3">
-          {tiers.map((tier, idx) => (
+          {tiers.map((tier) => (
             <div
               key={tier.id}
               className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
                 <span className="text-3xl">{tier.icon}</span>
-                <div>
+                <div className="flex-1">
                   <div className="font-bold text-gray-800 dark:text-white">{tier.name}</div>
                   <div className="text-sm text-gray-500">
                     من {tier.threshold_from.toLocaleString()} إلى {tier.threshold_to.toLocaleString()} ج
@@ -359,11 +364,11 @@ export default function SettingsPage() {
               
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {tier.price_per_thousand} ج / ألف
+                  <div className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                    💸 تحويل: {tier.transfer_price_per_thousand} ج/ألف
                   </div>
-                  <div className="text-xs text-gray-500">
-                    مثال: 5,000 ج = {(5 * tier.price_per_thousand).toFixed(0)} ج
+                  <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                    💰 سحب: {tier.withdrawal_price_per_thousand} ج/ألف
                   </div>
                 </div>
                 
@@ -407,6 +412,7 @@ export default function SettingsPage() {
                 <li>• المعاملة تُقسم على الشرائح المتبقية تلقائياً</li>
                 <li>• كلما زادت معاملاتك، قل السعر</li>
                 <li>• يُحسب على معاملات الكاش فقط للشهر الحالي</li>
+                <li>• سعر التحويل يختلف عن سعر السحب</li>
               </ul>
             </div>
           )}
@@ -606,13 +612,22 @@ export default function SettingsPage() {
             />
           </div>
           
-          <Input
-            label="السعر لكل ألف جنيه (ج)"
-            type="number"
-            value={tierForm.price_per_thousand}
-            onChange={e => setTierForm(f => ({ ...f, price_per_thousand: e.target.value }))}
-            hint="مثال: 10 = كل 1000 ج تُحسب بـ 10 ج"
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="💸 سعر التحويل (ج/ألف)"
+              type="number"
+              value={tierForm.transfer_price_per_thousand}
+              onChange={e => setTierForm(f => ({ ...f, transfer_price_per_thousand: e.target.value }))}
+              hint="مثال: 10 = كل 1000 ج تحويل بـ 10 ج"
+            />
+            <Input
+              label="💰 سعر السحب (ج/ألف)"
+              type="number"
+              value={tierForm.withdrawal_price_per_thousand}
+              onChange={e => setTierForm(f => ({ ...f, withdrawal_price_per_thousand: e.target.value }))}
+              hint="مثال: 8 = كل 1000 ج سحب بـ 8 ج"
+            />
+          </div>
           
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setShowTierModal(false)}>
