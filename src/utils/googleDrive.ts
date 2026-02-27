@@ -20,7 +20,7 @@ export async function uploadImage(
     const { data: { session } } = await supabase.auth.getSession()
     
     const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/google-drive?operation=upload`,
+      `${SUPABASE_URL}/functions/v1/clever-worker?operation=upload`,
       {
         method: 'POST',
         headers: {
@@ -55,7 +55,7 @@ export async function deleteImage(fileId: string): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession()
     
     const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/google-drive?operation=delete`,
+      `${SUPABASE_URL}/functions/v1/clever-worker?operation=delete`,
       {
         method: 'POST',
         headers: {
