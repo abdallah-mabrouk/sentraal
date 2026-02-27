@@ -26,6 +26,7 @@ const navItems = [
   { path: '/admin/expenses', label: 'المصروفات', icon: Receipt },
   { path: '/admin/cash', label: 'الدرج النقدي', icon: Wallet },
   { path: '/admin/branches', label: 'الفروع', icon: GitBranch },
+  { path: '/profile', label: 'الملف الشخصي', icon: Users },
   { path: '/admin/settings', label: 'الإعدادات', icon: Settings },
 ]
 
