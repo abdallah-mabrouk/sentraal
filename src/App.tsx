@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useBranchStore } from '@/stores/branchStore'
 import { PageLoader } from '@/components/ui/LoadingSpinner'
+import ProfilePage from '@/pages/ProfilePage'
 
 // Auth Pages
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
@@ -123,6 +124,7 @@ export default function App() {
             <Route path="requests" element={<AdminRequests />} />
             <Route path="branches" element={<AdminBranches />} />
             <Route path="registrations" element={<AdminRegistrations />} />
+            <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
 
