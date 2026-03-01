@@ -26,9 +26,10 @@ export async function uploadImage(
     }
 
     const result = await response.json()
+    const directUrl = `https://lh3.googleusercontent.com/d/${result.fileId}`
     
     return {
-      url: `https://drive.google.com/uc?export=view&id=${result.fileId}`,
+      url: directUrl,
       fileId: result.fileId,
     }
   } catch (error: any) {
