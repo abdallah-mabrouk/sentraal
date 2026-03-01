@@ -1,10 +1,8 @@
-// Google Drive via Supabase Edge Function (Combined)
-import { supabase } from '@/lib/supabase'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+// Google Drive via n8n
+const N8N_URL = 'https://n8n.amabrouk.cfd'
 
 /**
- * رفع صورة إلى Google Drive
+ * رفع صورة إلى Google Drive عبر n8n
  */
 export async function uploadImage(
   file: File,
@@ -13,65 +11,51 @@ export async function uploadImage(
 ): Promise<{ url: string; fileId: string }> {
   try {
     const formData = new FormData()
-    formData.append('file', file)
-    formData.append('folder', folder)
+    formData.append('data', file) // n8n expects 'data' as key
     formData.append('fileName', fileName)
+    formData.append('folder', folder)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/clever-worker?operation=upload`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: formData,
-      }
-    )
+    const response = await fetch(`${N8N_URL}/webhook/upload-image`, {
+      method: 'POST',
+      body: formData,
+    })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.error || 'Failed to upload image')
+      throw new Error(error.message || 'Failed to upload image')
     }
 
     const result = await response.json()
     
     return {
-      url: result.url,
+      url: `https://drive.google.com/uc?export=view&id=${result.fileId}`,
       fileId: result.fileId,
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error)
     throw error
   }
 }
 
 /**
- * حذف صورة من Google Drive
+ * حذف صورة من Google Drive عبر n8n
  */
 export async function deleteImage(fileId: string): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/clever-worker?operation=delete`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fileId }),
-      }
-    )
+    const response = await fetch(`${N8N_URL}/webhook/delete-image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fileId }),
+    })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.error || 'Failed to delete image')
+      throw new Error(error.message || 'Failed to delete image')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete error:', error)
-    throw error
+    // Don't throw - image might already be deleted
   }
 }
