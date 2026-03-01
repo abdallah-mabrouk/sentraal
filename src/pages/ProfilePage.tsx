@@ -175,43 +175,39 @@ export default function ProfilePage() {
   }
 
   const handleChangePassword = async () => {
-    if (!user) return
+  if (!user) return
 
-    // التحقق من الحقول
-    if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
-      toast.error('❌ يجب ملء جميع الحقول')
-      return
-    }
-
-    if (passwordForm.new.length < 8) {
-      toast.error('❌ كلمة المرور يجب أن تكون 8 أحرف على الأقل')
-      return
-    }
-
-    if (passwordForm.new !== passwordForm.confirm) {
-      toast.error('❌ كلمة المرور الجديدة غير متطابقة')
-      return
-    }
-
-    try {
-      const { data, error } = await supabase.rpc('change_user_password', {
-        p_user_id: user.id,
-        p_old_password: passwordForm.current,
-        p_new_password: passwordForm.new,
-      })
-
-      if (error) throw error
-
-      if (data[0]?.success) {
-        toast.success('✅ ' + data[0].message)
-        setPasswordForm({ current: '', new: '', confirm: '' })
-      } else {
-        toast.error('❌ ' + data[0]?.message)
-      }
-    } catch (e: any) {
-      toast.error(e.message || '❌ حدث خطأ')
-    }
+  // التحقق
+  if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) {
+    toast.error('❌ يجب ملء جميع الحقول')
+    return
   }
+
+  if (passwordForm.new.length < 8) {
+    toast.error('❌ كلمة المرور يجب أن تكون 8 أحرف على الأقل')
+    return
+  }
+
+  if (passwordForm.new !== passwordForm.confirm) {
+    toast.error('❌ كلمة المرور الجديدة غير متطابقة')
+    return
+  }
+
+  try {
+    // استخدام Supabase Auth API
+    const { error } = await supabase.auth.updateUser({
+      password: passwordForm.new
+    })
+
+    if (error) throw error
+
+    toast.success('✅ تم تغيير كلمة المرور بنجاح')
+    setPasswordForm({ current: '', new: '', confirm: '' })
+  } catch (e: any) {
+    toast.error(e.message || '❌ حدث خطأ')
+  }
+}
+
 
   const handleSaveNotifications = async () => {
     if (!user) return
